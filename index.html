@@ -1,864 +1,477 @@
 <!DOCTYPE html>
 <html lang="am">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Darik Coffee (ዳሪክ ቡና) - Digital Ordering & KDS System</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
-  <style>
-    @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Ethiopic:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
-    
-    :root {
-      --brand-primary: #2C1810;
-      --brand-secondary: #1A0F0A;
-      --brand-accent: #D97706;
-      --brand-gold: #F59E0B;
-      --bg-cream: #FAF7F2;
-    }
-
-    body {
-      font-family: 'Plus Jakarta Sans', 'Noto Sans Ethiopic', sans-serif;
-      background-color: var(--bg-cream);
-      color: #1F1612;
-      position: relative;
-      overflow-x: hidden;
-    }
-
-    /* Transparent Wall Art Watermark Background */
-    .wall-art-bg {
-      position: fixed;
-      inset: 0;
-      z-index: 0;
-      pointer-events: none;
-      opacity: 0.06;
-      background-image: 
-        radial-gradient(circle at 20% 30%, #D97706 0%, transparent 45%),
-        radial-gradient(circle at 80% 70%, #2C1810 0%, transparent 50%),
-        url("data:image/svg+xml,%3Csvg width='120' height='120' viewBox='0 0 120 120' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M60 15c-15 0-28 12-28 28 0 18 28 45 28 45s28-27 28-45c0-16-13-28-28-28zm0 38c-5.5 0-10-4.5-10-10s4.5-10 10-10 10 4.5 10 10-4.5 10-10 10z' fill='%232C1810' fill-opacity='0.4'/%3E%3C/svg%3E");
-      background-size: cover, cover, 140px 140px;
-    }
-
-    .brand-gradient {
-      background: linear-gradient(135deg, #2C1810 0%, #1A0F0A 100%);
-    }
-    .brand-gradient-gold {
-      background: linear-gradient(135deg, #B45309 0%, #D97706 100%);
-    }
-
-    @keyframes pulseBorder {
-      0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.55); border-color: #EF4444; }
-      50% { box-shadow: 0 0 0 6px rgba(239, 68, 68, 0); border-color: #F87171; }
-    }
-    .pulse-alert {
-      animation: pulseBorder 1.6s infinite;
-      border-width: 2px;
-    }
-
-    @keyframes rvLogoIn {
-      from { opacity: 0; transform: scale(0.88) translateY(12px); }
-      to { opacity: 1; transform: none; }
-    }
-    #splash { transition: opacity 0.5s ease; }
-    #splash.rv-out { opacity: 0; pointer-events: none; }
-
-    .no-scrollbar::-webkit-scrollbar { display: none; }
-    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-  </style>
-</head>
-<body class="min-h-screen flex flex-col">
-
-  <!-- Transparent Artistic Watermark Layer -->
-  <div class="wall-art-bg"></div>
-
-  <!-- Splash / Intro Screen -->
-  <div id="splash" onclick="hideSplash()" class="fixed inset-0 z-[90] brand-gradient text-white flex flex-col items-center justify-center p-6 cursor-pointer">
-    <div style="animation: rvLogoIn 0.7s ease-out;" class="text-center max-w-md">
-      <div class="w-24 h-24 mx-auto mb-5 rounded-full bg-amber-500/20 border-2 border-amber-400 flex items-center justify-center text-5xl shadow-2xl">
-        ☕
-      </div>
-      <p class="text-amber-400 text-xs font-bold tracking-[0.25em] uppercase mb-2">Since 2011 E.C.</p>
-      <h1 class="text-4xl sm:text-5xl font-extrabold tracking-tight mb-2">ዳሪክ ቡና</h1>
-      <h2 class="text-xl sm:text-2xl font-bold text-amber-200 tracking-widest uppercase mb-6">DARIK COFFEE</h2>
-      <p class="text-sm text-stone-300 leading-relaxed mb-8">
-        የኢትዮጵያ ምርጥ ባህላዊ ቡናዎች፣ ትኩስ ቁርስ፣ ጣፋጭ ገበታ እና ልዩ በርገርና ሻዋርማ በዲጂታል ሲስተም ይዘዙ።
-      </p>
-      <button class="px-8 py-3 rounded-full bg-amber-500 hover:bg-amber-400 text-stone-950 font-extrabold text-sm shadow-lg transition transform hover:scale-105">
-        ወደ ሜኑ ይግቡ / Enter Menu →
-      </button>
-    </div>
-  </div>
-
-  <!-- Top Delivery & Contact Banner -->
-  <div class="relative z-10 bg-stone-950 text-amber-100 text-xs sm:text-sm py-2 px-4 text-center font-medium flex flex-wrap items-center justify-center gap-3 border-b border-amber-900/50">
-    <span>☕ <strong>ለቤት ዲሊቨሪ እና ለልዩ ፕሮግራሞች በሰዓቱ እናስተናግዳለን!</strong></span>
-    <span class="text-amber-400 font-extrabold tracking-wide">| 📞 ዲሊቨሪ: <span id="topPhone">0981 13 52 01</span></span>
-    <span class="hidden md:inline text-stone-400 text-xs">| All prices are VAT inclusive!</span>
-  </div>
-
-  <!-- Main Header & Navigation -->
-  <header class="relative z-20 brand-gradient text-white shadow-xl sticky top-0 border-b border-amber-800/40">
-    <div class="max-w-7xl mx-auto px-4 py-3.5 flex flex-wrap items-center justify-between gap-3">
-      <div class="flex items-center gap-3">
-        <div class="w-11 h-11 rounded-xl bg-amber-500 text-stone-950 flex items-center justify-center text-2xl font-black shadow-md">
-          ☕
-        </div>
-        <div>
-          <div class="flex items-center gap-2">
-            <h1 id="brandTitle" class="text-lg sm:text-xl font-extrabold tracking-tight text-white">ዳሪክ ቡና | DARIK COFFEE</h1>
-            <span class="text-[10px] bg-amber-500/20 text-amber-300 border border-amber-400/30 px-2 py-0.5 rounded-full font-bold">2011 E.C</span>
-          </div>
-          <p class="text-xs text-stone-300">All prices are VAT inclusive! • Addis Ababa</p>
-        </div>
-      </div>
-
-      <!-- Mode Switcher (Customer vs KDS/Admin) -->
-      <div class="flex items-center gap-2 bg-black/30 p-1 rounded-xl border border-white/10">
-        <button onclick="switchView('customer')" id="btnCustomerView" class="px-3.5 py-2 rounded-lg text-xs sm:text-sm font-bold bg-amber-500 text-stone-950 transition">
-          🍽️ ደንበኛ (Order)
-        </button>
-        <button onclick="openKdsModal()" id="btnKdsView" class="px-3.5 py-2 rounded-lg text-xs sm:text-sm font-bold text-stone-200 hover:bg-white/10 transition flex items-center gap-1.5">
-          <span>👨‍🍳 KDS / Admin</span>
-          <span id="kdsBadge" class="bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-full font-extrabold">0</span>
-        </button>
-      </div>
-    </div>
-  </header>
-
-  <!-- ==================== CUSTOMER ORDERING VIEW ==================== -->
-  <main id="customerView" class="relative z-10 flex-1 max-w-7xl w-full mx-auto px-4 py-6 grid grid-cols-1 lg:grid-cols-12 gap-6">
-    
-    <!-- Left Column: Menu & Categories (8 cols) -->
-    <div class="lg:col-span-8 space-y-5">
-      
-      <!-- Search & Quick Filter Bar -->
-      <div class="bg-white/90 backdrop-blur-md p-4 rounded-2xl shadow-sm border border-stone-200/80 flex flex-col sm:flex-row gap-3">
-        <div class="relative flex-1">
-          <span class="absolute left-3.5 top-3 text-stone-400">🔍</span>
-          <input type="text" id="searchInput" oninput="renderMenu()" placeholder="ምግብ ወይም መጠጥ ይፈልጉ (ለምሳሌ፡ ጨጨብሳ፣ ሲዳማ፣ በርገር)..." 
-            class="w-full pl-10 pr-4 py-2.5 rounded-xl bg-stone-100 border border-stone-200 focus:outline-none focus:border-amber-600 text-sm font-medium" />
-        </div>
-        <div class="flex items-center gap-2 text-xs font-bold text-amber-800 bg-amber-50 px-3.5 py-2 rounded-xl border border-amber-200">
-          <span>✅ VAT Inclusive</span>
-        </div>
-      </div>
-
-      <!-- Category Tabs -->
-      <div id="categoryTabs" class="flex gap-2 overflow-x-auto no-scrollbar pb-1">
-        <!-- Populated dynamically by JS -->
-      </div>
-
-      <!-- Menu Items Grid -->
-      <div id="menuGrid" class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-        <!-- Populated dynamically by JS -->
-      </div>
-
-      <!-- Extras Section -->
-      <div class="bg-white/95 backdrop-blur-md p-5 rounded-2xl shadow-sm border border-amber-200/80">
-        <div class="flex items-center justify-between mb-3">
-          <h3 class="text-base font-extrabold text-stone-900 flex items-center gap-2">
-            <span>➕ ጭማሪ / EXTRA</span>
-            <span class="text-xs font-medium text-stone-500">(ከትዕዛዝዎ ጋር ይጨምሩ)</span>
-          </h3>
-        </div>
-        <div id="extrasGrid" class="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-          <!-- Populated dynamically by JS -->
-        </div>
-      </div>
-    </div>
-
-    <!-- Right Column: Cart, Table Checking & Checkout (4 cols) -->
-    <div class="lg:col-span-4">
-      <div class="bg-white/95 backdrop-blur-md rounded-2xl shadow-lg border border-stone-200 p-5 sticky top-20 space-y-4">
-        <div class="flex items-center justify-between border-b border-stone-200 pb-3">
-          <h2 class="text-lg font-extrabold text-stone-900 flex items-center gap-2">
-            <span>🛒 የእርስዎ ትዕዛዝ</span>
-            <span id="cartCount" class="bg-amber-600 text-white text-xs px-2 py-0.5 rounded-full">0</span>
-          </h2>
-          <button onclick="clearCart()" class="text-xs text-red-600 hover:underline font-semibold">አጽዳ (Clear)</button>
-        </div>
-
-        <!-- Service Type Selector (Table Checking vs Delivery) -->
-        <div class="grid grid-cols-2 gap-2 bg-stone-100 p-1 rounded-xl">
-          <button type="button" onclick="setOrderType('table')" id="typeTableBtn" class="py-2 rounded-lg text-xs font-extrabold bg-white text-stone-900 shadow-sm transition">
-            🪑 እዚሁ መመገብ (Table)
-          </button>
-          <button type="button" onclick="setOrderType('delivery')" id="typeDeliveryBtn" class="py-2 rounded-lg text-xs font-extrabold text-stone-600 transition">
-            🛵 ዲሊቨሪ (Delivery)
-          </button>
-        </div>
-
-        <!-- Table Number or Delivery Details -->
-        <div id="tableInputBox" class="space-y-2">
-          <label class="block text-xs font-bold text-stone-700">የጠረጴዛ ቁጥር ይምረጡ (Table Checking):</label>
-          <select id="tableNumber" class="w-full p-2.5 rounded-xl border border-stone-300 bg-stone-50 text-sm font-bold focus:outline-none focus:border-amber-600">
-            <option value="Table 1">ጠረጴዛ 1 (Table 1)</option>
-            <option value="Table 2">ጠረጴዛ 2 (Table 2)</option>
-            <option value="Table 3">ጠረጴዛ 3 (Table 3)</option>
-            <option value="Table 4">ጠረጴዛ 4 (Table 4)</option>
-            <option value="Table 5">ጠረጴዛ 5 (Table 5)</option>
-            <option value="Table 6">ጠረጴዛ 6 (Table 6)</option>
-            <option value="Table 7">ጠረጴዛ 7 (Table 7)</option>
-            <option value="Table 8">ጠረጴዛ 8 (Table 8)</option>
-            <option value="Table 9">ጠረጴዛ 9 (Table 9)</option>
-            <option value="Table 10">ጠረጴዛ 10 (Table 10)</option>
-            <option value="VIP Lounge">VIP ክፍል (VIP Lounge)</option>
-          </select>
-        </div>
-
-        <div id="deliveryInputBox" class="hidden space-y-2">
-          <input type="text" id="custName" placeholder="የደንበኛ ስም (Full Name)" class="w-full p-2.5 rounded-xl border border-stone-300 text-sm" />
-          <input type="tel" id="custPhone" placeholder="ስልክ ቁጥር (09...)" class="w-full p-2.5 rounded-xl border border-stone-300 text-sm" />
-          <input type="text" id="custAddress" placeholder="አድራሻ (Location / Building)" class="w-full p-2.5 rounded-xl border border-stone-300 text-sm" />
-        </div>
-
-        <!-- Cart Items List -->
-        <div id="cartItems" class="max-h-60 overflow-y-auto space-y-2.5 divide-y divide-stone-100">
-          <p class="text-center text-stone-400 text-sm py-8">እስካሁን ምንም አልመረጡም። ከሜኑ ውስጥ ይምረጡ!</p>
-        </div>
-
-        <!-- Note / Special Instruction -->
-        <div>
-          <input type="text" id="orderNote" placeholder="ልዩ ትዕዛዝ ካለዎት እዚህ ይጻፉ (ለምሳሌ፡ ያለ ስኳር፣ በርበሬ ይብዛ)..." 
-            class="w-full p-2.5 rounded-xl bg-stone-50 border border-stone-200 text-xs" />
-        </div>
-
-        <!-- Payment Method -->
-        <div class="space-y-1.5">
-          <label class="block text-xs font-bold text-stone-700">የክፍያ አማራጭ (Payment Method):</label>
-          <select id="paymentMethod" onchange="togglePaymentDetails()" class="w-full p-2.5 rounded-xl border border-stone-300 bg-stone-50 text-xs font-bold">
-            <option value="Cash">💵 በካሽ (Cash at Counter / Table)</option>
-            <option value="Telebirr">📱 በቴሌብር (Telebirr - 0981 13 52 01)</option>
-            <option value="CBE">🏦 በንግድ ባንክ (CBE Transfer)</option>
-          </select>
-          <div id="paymentAccountInfo" class="hidden p-2.5 rounded-xl bg-amber-50 border border-amber-200 text-xs text-amber-950 space-y-1">
-            <p class="font-bold">የክፍያ መረጃ (Abigiya Asrat):</p>
-            <p>📱 Telebirr: <strong>0981 13 52 01</strong></p>
-            <input type="text" id="txRef" placeholder="የትራንዛክሽን ቁጥር (Transaction ID - አማራጭ)" class="w-full mt-1 p-1.5 rounded border border-amber-300 bg-white text-xs" />
-          </div>
-        </div>
-
-        <!-- Total & Submit -->
-        <div class="border-t border-stone-200 pt-3 space-y-3">
-          <div class="flex justify-between items-center text-base font-extrabold">
-            <span>ጠቅላላ ድምር (VAT Inclusive):</span>
-            <span id="cartTotal" class="text-xl text-amber-700">0 ብር</span>
-          </div>
-          <button onclick="submitOrder()" class="w-full py-3.5 rounded-xl brand-gradient-gold text-white font-extrabold text-sm shadow-lg hover:opacity-95 transition transform active:scale-98">
-            ✅ ትዕዛዙን አረጋግጥ (Place Order)
-          </button>
-        </div>
-
-        <!-- Active Customer Order Tracker -->
-        <div id="myOrderTracker" class="hidden bg-emerald-50 border border-emerald-200 rounded-xl p-3 text-xs space-y-1">
-          <div class="flex justify-between font-extrabold text-emerald-900">
-            <span>የመጨረሻ ትዕዛዝዎ ሁኔታ:</span>
-            <span id="trackerStatus" class="uppercase px-2 py-0.5 rounded bg-emerald-200 text-emerald-950">Pending</span>
-          </div>
-          <p id="trackerDetails" class="text-emerald-800"></p>
-        </div>
-      </div>
-    </div>
-  </main>
-
-  <!-- ==================== KDS / KITCHEN & ADMIN VIEW ==================== -->
-  <section id="kdsView" class="hidden relative z-10 flex-1 max-w-7xl w-full mx-auto px-4 py-6 space-y-6">
-    <div class="bg-white p-5 rounded-2xl shadow-sm border border-stone-200 flex flex-wrap items-center justify-between gap-4">
-      <div>
-        <h2 class="text-xl font-extrabold text-stone-900">👨‍🍳 የወጥ ቤት እና ካሸር መቆጣጠሪያ (Live KDS)</h2>
-        <p class="text-xs text-stone-500">አዲስ ትዕዛዝ ሲመጣ በቀጥታ እዚህ ይታያል። ሁኔታውን (Status) እየቀየሩ ያስተናግዱ።</p>
-      </div>
-      <div class="flex flex-wrap items-center gap-3">
-        <div class="bg-amber-50 border border-amber-200 px-4 py-2 rounded-xl text-right">
-          <p class="text-[11px] text-amber-800 font-bold">የዛሬ ጠቅላላ ሽያጭ</p>
-          <p id="totalSalesAmount" class="text-lg font-extrabold text-amber-950">0 ብር</p>
-        </div>
-        <button onclick="playNotificationSound()" class="px-3.5 py-2.5 rounded-xl bg-stone-100 hover:bg-stone-200 text-xs font-bold text-stone-800">
-          🔔 ድምፅ ሞክር
-        </button>
-        <button onclick="clearCompletedOrders()" class="px-3.5 py-2.5 rounded-xl bg-red-50 hover:bg-red-100 text-xs font-bold text-red-700">
-          🗑️ የተጠናቀቁትን አጥፋ
-        </button>
-      </div>
-    </div>
-
-    <!-- Orders Columns -->
-    <div id="kdsOrdersGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-      <!-- Populated dynamically -->
-    </div>
-  </section>
-
-  <!-- PIN Modal for KDS Access -->
-  <div id="pinModal" class="hidden fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-    <div class="bg-white rounded-2xl max-w-sm w-full p-6 space-y-4 shadow-2xl">
-      <h3 class="text-lg font-extrabold text-stone-900">🔐 የሰራተኛ / Admin መግቢያ</h3>
-      <p class="text-xs text-stone-600">ወደ ወጥ ቤት (KDS) እና ሪፖርት ገጽ ለመግባት የይለፍ ቃል ያስገቡ (Default PIN: <strong>1234</strong>)</p>
-      <input type="password" id="kdsPinInput" placeholder="PIN ያስገቡ..." class="w-full p-3 rounded-xl border border-stone-300 text-center text-lg font-bold tracking-widest" />
-      <div class="flex gap-2">
-        <button onclick="closeKdsModal()" class="flex-1 py-2.5 rounded-xl bg-stone-100 font-bold text-xs">ተመለስ</button>
-        <button onclick="verifyKdsPin()" class="flex-1 py-2.5 rounded-xl brand-gradient text-white font-bold text-xs">ግባ (Unlock)</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Footer -->
-  <footer class="relative z-10 brand-gradient text-stone-300 py-8 px-4 mt-12 border-t border-amber-900/40">
-    <div class="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-6 text-xs">
-      <div>
-        <h4 class="text-white font-extrabold text-base mb-2">ዳሪክ ቡና | DARIK COFFEE</h4>
-        <p class="text-stone-400 leading-relaxed">Since 2011 E.C. • በኢትዮጵያ ምርጥ ቡና እና ጣፋጭ ባህላዊና ዘመናዊ ምግቦች ትክክለኛውን የካፌ ቆይታ ያጣጥሙ።</p>
-      </div>
-      <div>
-        <h4 class="text-white font-bold text-sm mb-2">አድራሻ እና ስልክ</h4>
-        <p>📞 ስልክ / ቴሌብር: <strong class="text-amber-400">0981 13 52 01</strong> (Abigiya Asrat)</p>
-        <p class="mt-1">🕒 የስራ ሰዓት: ከጠዋቱ 12:30 - ምሽቱ 3:00</p>
-      </div>
-      <div>
-        <h4 class="text-white font-bold text-sm mb-2">ማህበራዊ ሚዲያ (Social Media)</h4>
-        <p>📘 Facebook: <strong>Darik Coffee Ethiopia</strong></p>
-        <p>✈️ Telegram: <strong>Darik Coffee Ethiopia</strong></p>
-        <p>🎵 TikTok: <strong>Darik Coffee Ethiopia</strong></p>
-      </div>
-    </div>
-  </footer>
-
-  <script>
-    // =========================================================================
-    // 1. CENTRALIZED CLIENT CONFIGURATION (ለሌሎች ክላይንቶች እዚህ ብቻ ይቀይሩ)
-    // =========================================================================
-    const CLIENT_CONFIG = {
-      cafeNameAm: "ዳሪክ ቡና",
-      cafeNameEn: "DARIK COFFEE",
-      since: "Since 2011 E.C.",
-      phone: "0981 13 52 01",
-      accountHolder: "Abigiya Asrat",
-      adminPin: "1234",
-      // የFirebase መረጃ ካለዎት እዚህ ያስገቡ (ባዶ ከሆነ በLocalStorage ይሰራል)
-      firebaseConfig: {
-        apiKey: "",
-        authDomain: "",
-        databaseURL: "",
-        projectId: ""
-      }
-    };
-
-    // =========================================================================
-    // 2. COMPLETE DARIK COFFEE MENU DATA (ከምስሎቹ የተወሰደ ሙሉ ሜኑ)
-    // =========================================================================
-    const MENU_CATEGORIES = [
-      { id: "all", name: "ሁሉም (All)" },
-      { id: "coffee", name: "☕ ዳሪክ ባህላዊ ቡና" },
-      { id: "hot", name: "🔥 ትኩስ ነገር (Hot)" },
-      { id: "cold", name: "🥤 ጁስ፣ ሼክ እና ቀዝቃዛ" },
-      { id: "breakfast", name: "🍳 ዳሪክ ቁርስ" },
-      { id: "gebeta", name: "🍲 ዳሪክ ገበታ እና ሩዝ" },
-      { id: "burger", name: "🍔 ሻዋርማ እና በርገር" }
-    ];
-
-    const MENU_ITEMS = [
-      // 1. ዳሪክ ባህላዊ ቡና / TRADITIONAL COFFEE
-      { id: "c1", cat: "coffee", nameAm: "ዳሪክ ስፔሻል", nameEn: "Darik Special", price: 100 },
-      { id: "c2", cat: "coffee", nameAm: "ልዩ ቃና", nameEn: "Liyu Kana", price: 100 },
-      { id: "c3", cat: "coffee", nameAm: "ሐረር", nameEn: "Harer", price: 100 },
-      { id: "c4", cat: "coffee", nameAm: "ወንበራ", nameEn: "Wenbera", price: 100 },
-      { id: "c5", cat: "coffee", nameAm: "ጉጂ", nameEn: "Guji", price: 100 },
-      { id: "c6", cat: "coffee", nameAm: "ሲዳማ", nameEn: "Sidama", price: 100 },
-      { id: "c7", cat: "coffee", nameAm: "ይርጋጨፌ", nameEn: "Yirgachefe", price: 100 },
-      { id: "c8", cat: "coffee", nameAm: "ሊሙ", nameEn: "Limu", price: 100 },
-      { id: "c9", cat: "coffee", nameAm: "ወለጋ", nameEn: "Welega", price: 100 },
-      { id: "c10", cat: "coffee", nameAm: "ሚዛን ቴፒ", nameEn: "Mizan Tepi", price: 100 },
-      { id: "c11", cat: "coffee", nameAm: "ቤቤቃ", nameEn: "Bebeka", price: 100 },
-      { id: "c12", cat: "coffee", nameAm: "ማንኪራ", nameEn: "Mankira", price: 100 },
-      { id: "c13", cat: "coffee", nameAm: "ሸካ", nameEn: "Sheka", price: 100 },
-      { id: "c14", cat: "coffee", nameAm: "አንከሻ", nameEn: "Ankesha", price: 100 },
-
-      // 2. ትኩስ ነገር / HOT DRINK
-      { id: "h1", cat: "hot", nameAm: "ወተት", nameEn: "Milk", price: 180 },
-      { id: "h2", cat: "hot", nameAm: "ማኪያቶ", nameEn: "Macchiato", price: 150 },
-      { id: "h3", cat: "hot", nameAm: "የጾም ማኪያቶ", nameEn: "Fasting Macchiato", price: 250 },
-      { id: "h4", cat: "hot", nameAm: "ላቴ", nameEn: "Latte", price: 200 },
-      { id: "h5", cat: "hot", nameAm: "ካፑቺኖ", nameEn: "Cappuccino", price: 250 },
-      { id: "h6", cat: "hot", nameAm: "ሆት ቾኮሌት", nameEn: "Hot chocolate", price: 300 },
-      { id: "h7", cat: "hot", nameAm: "ካራሜል ማኪያቶ", nameEn: "Caramel Macchiato", price: 250 },
-      { id: "h8", cat: "hot", nameAm: "ካራሜል ላቴ", nameEn: "Caramel Latte", price: 280 },
-      { id: "h9", cat: "hot", nameAm: "ለውዝ ሻይ", nameEn: "Nut tea", price: 150 },
-      { id: "h10", cat: "hot", nameAm: "ቀሽር ሻይ", nameEn: "Ginger tea", price: 150 },
-      { id: "h11", cat: "hot", nameAm: "ብርቱካን ሻይ", nameEn: "Orange Tea", price: 150 },
-      { id: "h12", cat: "hot", nameAm: "አናናስ ሻይ", nameEn: "Pineapple Tea", price: 150 },
-      { id: "h13", cat: "hot", nameAm: "አረንጓዴ ሻይ", nameEn: "Green tea", price: 150 },
-      { id: "h14", cat: "hot", nameAm: "ሞሪንጋ ሻይ", nameEn: "Moringa tea", price: 150 },
-      { id: "h15", cat: "hot", nameAm: "ጦስኝ ሻይ", nameEn: "Tosign tea", price: 150 },
-      { id: "h16", cat: "hot", nameAm: "ሻይ በሎሚ", nameEn: "Tea with lemon", price: 120 },
-      { id: "h17", cat: "hot", nameAm: "እስፕሪስ", nameEn: "Tea with coffee", price: 120 },
-      { id: "h18", cat: "hot", nameAm: "ሻይ", nameEn: "Tea", price: 100 },
-      { id: "h19", cat: "hot", nameAm: "ሻይ ኮረንቲ", nameEn: "Tea koremt", price: 120 },
-      { id: "h20", cat: "hot", nameAm: "ስፔሻል ሻይ", nameEn: "Special Tea", price: 250 },
-
-      // 3. ጁስ ፣ ሼክ እና ቀዝቃዛ መጠጦች / JUICE, SHAKE AND COLD DRINKS
-      { id: "j1", cat: "cold", nameAm: "ፍሬሽ ጁስ", nameEn: "Seasonal Fruit Juice", price: 300 },
-      { id: "j2", cat: "cold", nameAm: "ሙዝ ሼክ", nameEn: "Banana Shake", price: 350 },
-      { id: "j3", cat: "cold", nameAm: "ፍሬሽ ጁስ ሼክ", nameEn: "Seasonal Fruit Juice Shake", price: 350 },
-      { id: "j4", cat: "cold", nameAm: "አይስ ላቴ", nameEn: "Ice Latte", price: 300 },
-      { id: "j5", cat: "cold", nameAm: "አይስ ኮፊ", nameEn: "Ice Coffee", price: 250 },
-      { id: "j6", cat: "cold", nameAm: "አይስ ሻይ", nameEn: "Ice Tea", price: 200 },
-      { id: "j7", cat: "cold", nameAm: "ሞጂቶ ስትሮበሪ", nameEn: "Mojito Strawberry", price: 300 },
-      { id: "j8", cat: "cold", nameAm: "ሞጂቶ ክላሲክ", nameEn: "Mojito Classic", price: 280 },
-      { id: "j9", cat: "cold", nameAm: "ሞጂቶ ቀረፋ", nameEn: "Mojito Cinnamon", price: 280 },
-      { id: "j10", cat: "cold", nameAm: "አምቦ ውሃ", nameEn: "Ambo mineral water", price: 100 },
-      { id: "j11", cat: "cold", nameAm: "ለስላሳ", nameEn: "Soft Drinks", price: 100 },
-      { id: "j12", cat: "cold", nameAm: "ውሃ 1L", nameEn: "1L Water", price: 80 },
-      { id: "j13", cat: "cold", nameAm: "ውሃ 1/2L", nameEn: "1/2L Water", price: 70 },
-      { id: "j14", cat: "cold", nameAm: "ብስኩት", nameEn: "Biscuits", price: 60 },
-
-      // 4. ዳሪክ ቁርስ / DARIK BREAKFAST
-      { id: "b1", cat: "breakfast", nameAm: "ጨጨብሳ", nameEn: "Chechebsa", price: 350 },
-      { id: "b2", cat: "breakfast", nameAm: "ስፔሻል ጨጨብሳ", nameEn: "Special Chechebsa", price: 400 },
-      { id: "b3", cat: "breakfast", nameAm: "የጤፍ ጨጨብሳ", nameEn: "Yetefi Chechebsa", price: 370 },
-      { id: "b4", cat: "breakfast", nameAm: "ስፔሻል የጤፍ ጨጨብሳ", nameEn: "Special Yetefi Chechebsa", price: 450 },
-      { id: "b5", cat: "breakfast", nameAm: "ፉል", nameEn: "Ful", price: 350 },
-      { id: "b6", cat: "breakfast", nameAm: "ስፔሻል ፉል", nameEn: "Special Ful", price: 400 },
-      { id: "b7", cat: "breakfast", nameAm: "እንቁላል ፍርፍር", nameEn: "Scrambled Egg", price: 350 },
-      { id: "b8", cat: "breakfast", nameAm: "እንቁላል ስልስ", nameEn: "Scrambled Egg with tomato Sauce", price: 380 },
-      { id: "b9", cat: "breakfast", nameAm: "እንቁላል ፍርፍር በስጋ", nameEn: "Scrambled Egg with meat", price: 400 },
-      { id: "b10", cat: "breakfast", nameAm: "እንቁላል ሳንዱች", nameEn: "Egg Sandwich", price: 300 },
-      { id: "b11", cat: "breakfast", nameAm: "እንቁላል ሳንዱች በቺዝ", nameEn: "Egg Sandwich With Cheese", price: 350 },
-      { id: "b12", cat: "breakfast", nameAm: "ኦምሌት", nameEn: "Omelette", price: 370 },
-      { id: "b13", cat: "breakfast", nameAm: "ኦምሌት በቺዝ", nameEn: "Omelette with Cheese", price: 400 },
-      { id: "b14", cat: "breakfast", nameAm: "ቱና ሳንዱች", nameEn: "Tuna Sandwich", price: 400 },
-      { id: "b15", cat: "breakfast", nameAm: "ቺፕስ", nameEn: "French Fries", price: 300 },
-      { id: "b16", cat: "breakfast", nameAm: "የጾም ኦትስ", nameEn: "Fasting Oats", price: 400 },
-      { id: "b17", cat: "breakfast", nameAm: "የፍስክ ኦትስ", nameEn: "Special Oats", price: 500 },
-      { id: "b18", cat: "breakfast", nameAm: "ፓንኬክ", nameEn: "Pancake", price: 350 },
-
-      // 5. ዳሪክ ገበታ / DARIK GEBETA & ሩዝ / RICE
-      { id: "g1", cat: "gebeta", nameAm: "ጭቅና ጥብስ", nameEn: "Chikena Tibs", price: 600 },
-      { id: "g2", cat: "gebeta", nameAm: "ጥብስ ፍርፍር", nameEn: "Tibs Firfir", price: 550 },
-      { id: "g3", cat: "gebeta", nameAm: "ዱለት", nameEn: "Dulet", price: 500 },
-      { id: "g4", cat: "gebeta", nameAm: "ቱና ፍርፍር", nameEn: "Tuna Firfir", price: 500 },
-      { id: "g5", cat: "gebeta", nameAm: "የጾም ፍርፍር", nameEn: "Fasting Firfir", price: 350 },
-      { id: "g6", cat: "gebeta", nameAm: "ተጋቢኖ", nameEn: "Tegabino", price: 450 },
-      { id: "g7", cat: "gebeta", nameAm: "ሽሮ", nameEn: "Shiro", price: 400 },
-      { id: "g8", cat: "gebeta", nameAm: "ሽሮ በቱና", nameEn: "Shiro With Tuna", price: 500 },
-      { id: "g9", cat: "gebeta", nameAm: "ሽሮ በጎመን", nameEn: "Shiro With Green", price: 500 },
-      { id: "g10", cat: "gebeta", nameAm: "ሽሮ በሱፍ", nameEn: "Shiro With Suf", price: 500 },
-      { id: "g11", cat: "gebeta", nameAm: "ሽሮ በሰላጣ", nameEn: "Shiro With Salad", price: 500 },
-      { id: "g12", cat: "gebeta", nameAm: "ቲማቲም ለብለብ", nameEn: "Timatim Lebleb", price: 380 },
-      { id: "g13", cat: "gebeta", nameAm: "ፓስታ በስልስ", nameEn: "Pasta with tomato", price: 350 },
-      { id: "g14", cat: "gebeta", nameAm: "ፓስታ በአትክልት", nameEn: "Pasta with vegetables", price: 400 },
-      { id: "g15", cat: "gebeta", nameAm: "ፓስታ በስጋ", nameEn: "Pasta with meat", price: 450 },
-      { id: "g16", cat: "gebeta", nameAm: "ሩዝ በዶሮ", nameEn: "Rice with chicken", price: 500 },
-      { id: "g17", cat: "gebeta", nameAm: "ሩዝ በአትክልት", nameEn: "Rice with Vegetables", price: 400 },
-
-      // 6. ዳሪክ ሻዋርማ እና በርገር / DARIK SHAWARMA & BURGER
-      { id: "s1", cat: "burger", nameAm: "ዳሪክ ስፔሻል በርገር", nameEn: "Darik Special Burger", price: 600 },
-      { id: "s2", cat: "burger", nameAm: "ደብል ስፔሻል በርገር", nameEn: "Double Special Burger", price: 750 },
-      { id: "s3", cat: "burger", nameAm: "ቺዝ በርገር", nameEn: "Cheese Burger", price: 550 },
-      { id: "s4", cat: "burger", nameAm: "ኖርማል በርገር", nameEn: "Normal Burger", price: 500 },
-      { id: "s5", cat: "burger", nameAm: "ስፔሻል ሻዋርማ", nameEn: "Special Shawarma", price: 650 },
-      { id: "s6", cat: "burger", nameAm: "ቺክን ሻዋርማ", nameEn: "Chicken Shawarma", price: 600 },
-      { id: "s7", cat: "burger", nameAm: "ቢፍ ሻዋርማ", nameEn: "Beef Shawarma", price: 500 },
-      { id: "s8", cat: "burger", nameAm: "ቱና ሻዋርማ", nameEn: "Tuna Shawarma", price: 500 }
-    ];
-
-    const EXTRA_ITEMS = [
-      { id: "ex1", nameAm: "ጭማሪ እንጀራ", nameEn: "Extra Enjera", price: 60 },
-      { id: "ex2", nameAm: "ጭማሪ ዳቦ", nameEn: "Extra Bread", price: 60 },
-      { id: "ex3", nameAm: "ማዮኔዝ", nameEn: "Mayonnaise", price: 70 },
-      { id: "ex4", nameAm: "ቺሊ ማዮኔዝ", nameEn: "Chili mayonnaise", price: 80 },
-      { id: "ex5", nameAm: "ቺዝ", nameEn: "Cheese", price: 60 },
-      { id: "ex6", nameAm: "ቢፍ", nameEn: "Beef", price: 80 },
-      { id: "ex7", nameAm: "እንቁላል", nameEn: "Egg", price: 60 },
-      { id: "ex8", nameAm: "ቺፕስ ጭማሪ", nameEn: "Fries Extra", price: 100 }
-    ];
-
-    // =========================================================================
-    // 3. STATE & DATABASE SYNC (Firebase + LocalStorage Fallback)
-    // =========================================================================
-    let activeCategory = "all";
-    let orderType = "table";
-    let cart = [];
-    let orders = JSON.parse(localStorage.getItem("darik_orders") || "[]");
-    let lastPlacedOrderId = localStorage.getItem("darik_last_order_id") || null;
-    let db = null;
-
-    if (CLIENT_CONFIG.firebaseConfig.databaseURL) {
-      try {
-        firebase.initializeApp(CLIENT_CONFIG.firebaseConfig);
-        db = firebase.database();
-        db.ref("orders").on("value", (snapshot) => {
-          const data = snapshot.val();
-          orders = data ? Object.values(data) : [];
-          renderKds();
-          updateCustomerTracker();
-        });
-      } catch (e) {
-        console.warn("Firebase fallback to local mode:", e);
-      }
-    }
-
-    // =========================================================================
-    // 4. UI RENDERING FUNCTIONS
-    // =========================================================================
-    function hideSplash() {
-      const splash = document.getElementById("splash");
-      splash.classList.add("rv-out");
-      setTimeout(() => splash.style.display = "none", 500);
-    }
-
-    function renderCategories() {
-      const container = document.getElementById("categoryTabs");
-      container.innerHTML = MENU_CATEGORIES.map(c => `
-        <button onclick="selectCategory('${c.id}')" 
-          class="whitespace-nowrap px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition shadow-sm border ${
-            activeCategory === c.id 
-              ? 'brand-gradient text-amber-300 border-amber-500' 
-              : 'bg-white text-stone-700 border-stone-200 hover:bg-amber-50'
-          }">
-          ${c.name}
-        </button>
-      `).join("");
-    }
-
-    function selectCategory(catId) {
-      activeCategory = catId;
-      renderCategories();
-      renderMenu();
-    }
-
-    function renderMenu() {
-      const query = document.getElementById("searchInput").value.toLowerCase().trim();
-      const filtered = MENU_ITEMS.filter(item => {
-        const matchCat = activeCategory === "all" || item.cat === activeCategory;
-        const matchQuery = item.nameAm.toLowerCase().includes(query) || item.nameEn.toLowerCase().includes(query);
-        return matchCat && matchQuery;
-      });
-
-      const grid = document.getElementById("menuGrid");
-      if (filtered.length === 0) {
-        grid.innerHTML = `<div class="col-span-full text-center py-10 text-stone-500 font-semibold">የፈለጉት ምግብ ወይም መጠጥ አልተገኘም።</div>`;
-        return;
-      }
-
-      grid.innerHTML = filtered.map(item => `
-        <div class="bg-white/95 backdrop-blur-sm p-4 rounded-2xl border border-stone-200/90 hover:border-amber-500 shadow-sm hover:shadow-md transition flex items-center justify-between gap-3">
-          <div>
-            <h4 class="font-extrabold text-stone-900 text-sm sm:text-base">${item.nameAm}</h4>
-            <p class="text-xs text-stone-500 font-medium">${item.nameEn}</p>
-            <p class="text-amber-700 font-extrabold text-sm mt-1.5">${item.price} ብር</p>
-          </div>
-          <button onclick="addToCart('${item.id}', false)" 
-            class="px-3.5 py-2 rounded-xl bg-amber-100 hover:bg-amber-500 text-amber-950 hover:text-stone-950 font-extrabold text-xs transition shrink-0">
-            + ጨምር
-          </button>
-        </div>
-      `).join("");
-    }
-
-    function renderExtras() {
-      const grid = document.getElementById("extrasGrid");
-      grid.innerHTML = EXTRA_ITEMS.map(ex => `
-        <button onclick="addToCart('${ex.id}', true)" 
-          class="p-2.5 rounded-xl bg-stone-50 hover:bg-amber-50 border border-stone-200 hover:border-amber-400 text-left transition">
-          <p class="text-xs font-extrabold text-stone-900 truncate">${ex.nameAm}</p>
-          <p class="text-[11px] text-stone-500 truncate">${ex.nameEn}</p>
-          <p class="text-xs font-bold text-amber-700 mt-1">+ ${ex.price} ብር</p>
-        </button>
-      `).join("");
-    }
-
-    // =========================================================================
-    // 5. CART & ORDERING LOGIC
-    // =========================================================================
-    function addToCart(id, isExtra) {
-      const source = isExtra ? EXTRA_ITEMS : MENU_ITEMS;
-      const product = source.find(p => p.id === id);
-      if (!product) return;
-
-      const existing = cart.find(c => c.id === id);
-      if (existing) {
-        existing.qty += 1;
-      } else {
-        cart.push({ ...product, qty: 1 });
-      }
-      renderCart();
-    }
-
-    function updateQty(id, delta) {
-      const idx = cart.findIndex(c => c.id === id);
-      if (idx === -1) return;
-      cart[idx].qty += delta;
-      if (cart[idx].qty <= 0) cart.splice(idx, 1);
-      renderCart();
-    }
-
-    function clearCart() {
-      cart = [];
-      renderCart();
-    }
-
-    function renderCart() {
-      const container = document.getElementById("cartItems");
-      const countEl = document.getElementById("cartCount");
-      const totalEl = document.getElementById("cartTotal");
-
-      const totalQty = cart.reduce((sum, item) => sum + item.qty, 0);
-      const totalPrice = cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
-
-      countEl.textContent = totalQty;
-      totalEl.textContent = `${totalPrice} ብር`;
-
-      if (cart.length === 0) {
-        container.innerHTML = `<p class="text-center text-stone-400 text-sm py-8">እስካሁን ምንም አልመረጡም። ከሜኑ ውስጥ ይምረጡ!</p>`;
-        return;
-      }
-
-      container.innerHTML = cart.map(item => `
-        <div class="py-2.5 flex items-center justify-between gap-2">
-          <div class="min-w-0 flex-1">
-            <p class="text-xs font-extrabold text-stone-900 truncate">${item.nameAm}</p>
-            <p class="text-[11px] text-stone-500">${item.price} ብር × ${item.qty}</p>
-          </div>
-          <div class="flex items-center gap-1.5">
-            <button onclick="updateQty('${item.id}', -1)" class="w-6 h-6 rounded-lg bg-stone-200 hover:bg-stone-300 font-bold text-xs">-</button>
-            <span class="text-xs font-extrabold w-5 text-center">${item.qty}</span>
-            <button onclick="updateQty('${item.id}', 1)" class="w-6 h-6 rounded-lg bg-amber-200 hover:bg-amber-300 font-bold text-xs">+</button>
-          </div>
-        </div>
-      `).join("");
-    }
-
-    function setOrderType(type) {
-      orderType = type;
-      const tBtn = document.getElementById("typeTableBtn");
-      const dBtn = document.getElementById("typeDeliveryBtn");
-      const tBox = document.getElementById("tableInputBox");
-      const dBox = document.getElementById("deliveryInputBox");
-
-      if (type === "table") {
-        tBtn.className = "py-2 rounded-lg text-xs font-extrabold bg-white text-stone-900 shadow-sm transition";
-        dBtn.className = "py-2 rounded-lg text-xs font-extrabold text-stone-600 transition";
-        tBox.classList.remove("hidden");
-        dBox.classList.add("hidden");
-      } else {
-        dBtn.className = "py-2 rounded-lg text-xs font-extrabold bg-white text-stone-900 shadow-sm transition";
-        tBtn.className = "py-2 rounded-lg text-xs font-extrabold text-stone-600 transition";
-        dBox.classList.remove("hidden");
-        tBox.classList.add("hidden");
-      }
-    }
-
-    function togglePaymentDetails() {
-      const method = document.getElementById("paymentMethod").value;
-      const infoBox = document.getElementById("paymentAccountInfo");
-      if (method === "Telebirr" || method === "CBE") {
-        infoBox.classList.remove("hidden");
-      } else {
-        infoBox.classList.add("hidden");
-      }
-    }
-
-    function submitOrder() {
-      if (cart.length === 0) {
-        alert("እባክዎ መጀመሪያ ከሜኑ ውስጥ ምግብ ወይም መጠጥ ይምረጡ!");
-        return;
-      }
-
-      let locationLabel = "";
-      if (orderType === "table") {
-        locationLabel = document.getElementById("tableNumber").value;
-      } else {
-        const name = document.getElementById("custName").value.trim();
-        const phone = document.getElementById("custPhone").value.trim();
-        const addr = document.getElementById("custAddress").value.trim();
-        if (!name || !phone) {
-          alert("ለዲሊቨሪ እባክዎ ስም እና ስልክ ቁጥር ያስገቡ!");
-          return;
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ዳሪክ ካፌ | Darik Coffee Menu</title>
+    <style>
+        :root {
+            --primary-color: #3b2314;
+            --accent-color: #c29b38;
+            --bg-color: #f9f6f0;
+            --text-color: #333333;
+            --card-bg: #ffffff;
         }
-        locationLabel = `Delivery: ${name} (${phone}) - ${addr}`;
-      }
 
-      const newOrder = {
-        id: "ORD-" + Math.floor(1000 + Math.random() * 9000),
-        type: orderType,
-        location: locationLabel,
-        items: [...cart],
-        total: cart.reduce((sum, i) => sum + i.price * i.qty, 0),
-        note: document.getElementById("orderNote").value.trim(),
-        payment: document.getElementById("paymentMethod").value,
-        txRef: document.getElementById("txRef").value.trim(),
-        status: "Pending",
-        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-      };
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
 
-      orders.unshift(newOrder);
-      saveOrders();
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            padding-bottom: 80px;
+        }
 
-      lastPlacedOrderId = newOrder.id;
-      localStorage.setItem("darik_last_order_id", newOrder.id);
+        header {
+            background-color: var(--primary-color);
+            color: white;
+            text-align: center;
+            padding: 25px 15px;
+            border-bottom: 4px solid var(--accent-color);
+        }
 
-      cart = [];
-      document.getElementById("orderNote").value = "";
-      renderCart();
-      renderKds();
-      updateCustomerTracker();
-      playNotificationSound();
+        header h1 {
+            font-size: 2rem;
+            margin-bottom: 5px;
+            letter-spacing: 1px;
+        }
 
-      alert(`✅ ትዕዛዝዎ (${newOrder.id}) በተሳካ ሁኔታ ተልኳል! እናመሰግናለን።`);
-    }
+        header p {
+            font-size: 0.95rem;
+            color: #dcd6d0;
+        }
 
-    function saveOrders() {
-      localStorage.setItem("darik_orders", JSON.stringify(orders));
-      if (db) {
-        const obj = {};
-        orders.forEach(o => obj[o.id] = o);
-        db.ref("orders").set(obj);
-      }
-    }
+        .container {
+            max-width: 900px;
+            margin: 20px auto;
+            padding: 0 15px;
+        }
 
-    function updateCustomerTracker() {
-      if (!lastPlacedOrderId) return;
-      const found = orders.find(o => o.id === lastPlacedOrderId);
-      const box = document.getElementById("myOrderTracker");
-      if (!found) {
-        box.classList.add("hidden");
-        return;
-      }
-      box.classList.remove("hidden");
-      document.getElementById("trackerStatus").textContent = found.status;
-      document.getElementById("trackerDetails").textContent = `ትዕዛዝ ቁጥር ${found.id} (${found.location}) - ጠቅላላ: ${found.total} ብር`;
-    }
+        /* Table & Search Controls */
+        .controls-bar {
+            background: #ffffff;
+            padding: 15px;
+            border-radius: 10px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+            margin-bottom: 20px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            justify-content: space-between;
+            align-items: center;
+            border: 1px solid #ebdcc5;
+        }
 
-    // =========================================================================
-    // 6. KDS / KITCHEN DISPLAY SYSTEM LOGIC
-    // =========================================================================
-    function switchView(view) {
-      const custView = document.getElementById("customerView");
-      const kdsView = document.getElementById("kdsView");
-      const btnCust = document.getElementById("btnCustomerView");
-      const btnKds = document.getElementById("btnKdsView");
+        .table-select, .search-box {
+            flex: 1;
+            min-width: 250px;
+        }
 
-      if (view === "customer") {
-        custView.classList.remove("hidden");
-        kdsView.classList.add("hidden");
-        btnCust.className = "px-3.5 py-2 rounded-lg text-xs sm:text-sm font-bold bg-amber-500 text-stone-950 transition";
-        btnKds.className = "px-3.5 py-2 rounded-lg text-xs sm:text-sm font-bold text-stone-200 hover:bg-white/10 transition flex items-center gap-1.5";
-      } else {
-        custView.classList.add("hidden");
-        kdsView.classList.remove("hidden");
-        btnKds.className = "px-3.5 py-2 rounded-lg text-xs sm:text-sm font-bold bg-amber-500 text-stone-950 transition flex items-center gap-1.5";
-        btnCust.className = "px-3.5 py-2 rounded-lg text-xs sm:text-sm font-bold text-stone-200 hover:bg-white/10 transition";
-        renderKds();
-      }
-    }
+        .table-select label, .search-box label {
+            display: block;
+            font-weight: bold;
+            margin-bottom: 5px;
+            color: var(--primary-color);
+            font-size: 0.9rem;
+        }
 
-    function openKdsModal() {
-      document.getElementById("pinModal").classList.remove("hidden");
-      document.getElementById("kdsPinInput").value = "";
-      document.getElementById("kdsPinInput").focus();
-    }
+        .table-select select, .search-box input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            font-size: 1rem;
+            outline: none;
+        }
 
-    function closeKdsModal() {
-      document.getElementById("pinModal").classList.add("hidden");
-    }
+        .table-select select:focus, .search-box input:focus {
+            border-color: var(--accent-color);
+        }
 
-    function verifyKdsPin() {
-      const pin = document.getElementById("kdsPinInput").value;
-      if (pin === CLIENT_CONFIG.adminPin) {
-        closeKdsModal();
-        switchView("kds");
-      } else {
-        alert("❌ የተሳሳተ የይለፍ ቃል (PIN)! እባክዎ እንደገና ይሞክሩ።");
-      }
-    }
+        .category-section {
+            background: var(--card-bg);
+            border-radius: 10px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+            margin-bottom: 25px;
+            overflow: hidden;
+            border-top: 4px solid var(--accent-color);
+        }
 
-    function updateOrderStatus(orderId, newStatus) {
-      const order = orders.find(o => o.id === orderId);
-      if (order) {
-        order.status = newStatus;
-        saveOrders();
-        renderKds();
-        updateCustomerTracker();
-      }
-    }
+        .category-title {
+            background-color: #f2ede4;
+            color: var(--primary-color);
+            padding: 15px 20px;
+            font-size: 1.25rem;
+            font-weight: bold;
+            border-bottom: 1px solid #e2dad0;
+        }
 
-    function clearCompletedOrders() {
-      if (!confirm("የተጠናቀቁ (Served) ትዕዛዞችን ማጥፋት ይፈልጋሉ?")) return;
-      orders = orders.filter(o => o.status !== "Served");
-      saveOrders();
-      renderKds();
-    }
+        .menu-items {
+            padding: 10px 20px;
+        }
 
-    function renderKds() {
-      const activeCount = orders.filter(o => o.status === "Pending" || o.status === "Preparing").length;
-      document.getElementById("kdsBadge").textContent = activeCount;
+        .menu-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px dashed #e8e2d8;
+        }
 
-      const totalSales = orders.reduce((sum, o) => sum + o.total, 0);
-      document.getElementById("totalSalesAmount").textContent = `${totalSales} ብር`;
+        .menu-item:last-child {
+            border-bottom: none;
+        }
 
-      const grid = document.getElementById("kdsOrdersGrid");
-      if (orders.length === 0) {
-        grid.innerHTML = `<div class="col-span-full bg-white p-12 rounded-2xl text-center text-stone-400 font-bold border border-stone-200">እስካሁን ምንም የገባ ትዕዛዝ የለም።</div>`;
-        return;
-      }
+        .item-info {
+            display: flex;
+            flex-direction: column;
+        }
 
-      grid.innerHTML = orders.map(o => {
-        const isPending = o.status === "Pending";
-        const statusColor = 
-          o.status === "Pending" ? "bg-red-100 text-red-800" :
-          o.status === "Preparing" ? "bg-amber-100 text-amber-800" :
-          o.status === "Ready" ? "bg-emerald-100 text-emerald-800" : "bg-stone-200 text-stone-700";
+        .item-name {
+            font-size: 1rem;
+            font-weight: 600;
+            color: #2c2c2c;
+        }
 
-        return `
-          <div class="bg-white rounded-2xl p-4 shadow-md border border-stone-200 flex flex-col justify-between space-y-3 ${isPending ? 'pulse-alert' : ''}">
-            <div>
-              <div class="flex items-center justify-between border-b border-stone-100 pb-2 mb-2">
-                <span class="font-extrabold text-sm text-stone-900">${o.id} • ${o.time}</span>
-                <span class="text-xs font-extrabold px-2.5 py-1 rounded-full ${statusColor}">${o.status}</span>
-              </div>
-              <p class="text-xs font-extrabold text-amber-800 bg-amber-50 p-2 rounded-lg mb-2">${o.location}</p>
-              <ul class="space-y-1 text-xs">
-                ${o.items.map(i => `<li class="flex justify-between"><span><strong>${i.qty}×</strong> ${i.nameAm}</span><span class="text-stone-500">${i.price * i.qty} ብር</span></li>`).join("")}
-              </ul>
-              ${o.note ? `<p class="mt-2 text-[11px] bg-yellow-50 text-yellow-900 p-2 rounded border border-yellow-200">📝 ማሳሰቢያ: ${o.note}</p>` : ""}
-              <div class="mt-2 pt-2 border-t border-stone-100 flex justify-between text-xs font-bold">
-                <span>ክፍያ: ${o.payment} ${o.txRef ? `(${o.txRef})` : ""}</span>
-                <span class="text-amber-700 font-extrabold">${o.total} ብር</span>
-              </div>
+        .item-price {
+            font-size: 1rem;
+            font-weight: bold;
+            color: #8c5821;
+            background: #fdfaf5;
+            padding: 4px 10px;
+            border-radius: 6px;
+            border: 1px solid #ebdcc5;
+            text-align: center;
+            min-width: 100px;
+        }
+
+        .add-btn {
+            background-color: var(--accent-color);
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            margin-left: 15px;
+            transition: background 0.2s;
+        }
+
+        .add-btn:hover {
+            background-color: #a6812d;
+        }
+
+        /* Cart Floating Footer */
+        .cart-bar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            background-color: var(--primary-color);
+            color: white;
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 -4px 10px rgba(0,0,0,0.15);
+            z-index: 1000;
+        }
+
+        .cart-info {
+            font-size: 1.1rem;
+            font-weight: bold;
+        }
+
+        .order-btn {
+            background-color: var(--accent-color);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .order-btn:hover {
+            background-color: #d4a93f;
+        }
+
+        .vat-notice {
+            text-align: center;
+            font-style: italic;
+            color: #666;
+            margin: 30px 0;
+            font-size: 0.95rem;
+        }
+
+        footer {
+            text-align: center;
+            padding: 20px;
+            color: #777;
+            font-size: 0.85rem;
+            border-top: 1px solid #ddd;
+            margin-top: 40px;
+        }
+
+        @media (max-width: 600px) {
+            header h1 { font-size: 1.5rem; }
+            .category-title { font-size: 1.1rem; }
+            .controls-bar { flex-direction: column; align-items: stretch; }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>ዳሪክ ካፌ (DARIK COFFEE)</h1>
+        <p>Since 2011 G.C | Traditional Coffee, Modern Taste</p>
+    </header>
+
+    <div class="container">
+
+        <!-- የጠረጴዛ ቁጥር እና መፈለጊያ አሞሌ (Controls Bar) -->
+        <div class="controls-bar">
+            <div class="table-select">
+                <label for="tableNumber">📍 የጠረጴዛ ቁጥር ይምረጡ (Table Number):</label>
+                <select id="tableNumber">
+                    <option value="1">ጠረጴዛ 1 (Table 1)</option>
+                    <option value="2">ጠረጴዛ 2 (Table 2)</option>
+                    <option value="3">ጠረጴዛ 3 (Table 3)</option>
+                    <option value="4">ጠረጴዛ 4 (Table 4)</option>
+                    <option value="5">ጠረጴዛ 5 (Table 5)</option>
+                    <option value="VIP">VIP ጠረጴዛ</option>
+                </select>
             </div>
-
-            <div class="grid grid-cols-3 gap-1.5 pt-2">
-              <button onclick="updateOrderStatus('${o.id}', 'Preparing')" class="py-2 rounded-lg bg-amber-500 hover:bg-amber-600 text-white font-bold text-[11px]">🔥 እየተዘጋጀ</button>
-              <button onclick="updateOrderStatus('${o.id}', 'Ready')" class="py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[11px]">✅ ደርሷል</button>
-              <button onclick="updateOrderStatus('${o.id}', 'Served')" class="py-2 rounded-lg bg-stone-700 hover:bg-stone-800 text-white font-bold text-[11px]">🍽️ ተሰጥቷል</button>
+            <div class="search-box">
+                <label for="searchMenu">🔍 ምግብ ወይም መጠጥ ይፈልጉ:</label>
+                <input type="text" id="searchMenu" placeholder="ስም ይጻፉ..." onkeyup="filterMenu()">
             </div>
-          </div>
-        `;
-      }).join("");
-    }
+        </div>
 
-    function playNotificationSound() {
-      try {
-        const ctx = new (window.AudioContext || window.webkitAudioContext)();
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        osc.connect(gain);
-        gain.connect(ctx.destination);
-        osc.type = "sine";
-        osc.frequency.setValueAtTime(880, ctx.currentTime);
-        gain.gain.setValueAtTime(0.15, ctx.currentTime);
-        osc.start();
-        osc.stop(ctx.currentTime + 0.25);
-      } catch (e) {}
-    }
+        <!-- ባህላዊ ቡና / TRADITIONAL COFFEE -->
+        <div class="category-section">
+            <div class="category-title">☕ ባህላዊ ቡና (Traditional Coffee)</div>
+            <div class="menu-items">
+                <div class="menu-item"><span class="item-name">ዳሪክ አዳርሻ / Darik Special</span><div style="display:flex; align-items:center;"><span class="item-price">100 ብር</span><button class="add-btn" onclick="addToCart('ዳሪክ አዳርሻ', 100)">＋</button></div></div>
+                <div class="menu-item"><span class="item-name">ሊዩ ከና / Liyu Kana</span><div style="display:flex; align-items:center;"><span class="item-price">100 ብር</span><button class="add-btn" onclick="addToCart('ሊዩ ከና', 100)">＋</button></div></div>
+                <div class="menu-item"><span class="item-name">ሐረር / Harer</span><div style="display:flex; align-items:center;"><span class="item-price">100 ብር</span><button class="add-btn" onclick="addToCart('ሐረር', 100)">＋</button></div></div>
+                <div class="menu-item"><span class="item-name">ወንበራ / Wenbera</span><div style="display:flex; align-items:center;"><span class="item-price">100 ብር</span><button class="add-btn" onclick="addToCart('ወንበራ', 100)">＋</button></div></div>
+                <div class="menu-item"><span class="item-name">ጉጂ / Guji</span><div style="display:flex; align-items:center;"><span class="item-price">100 ብር</span><button class="add-btn" onclick="addToCart('ጉጂ', 100)">＋</button></div></div>
+                <div class="menu-item"><span class="item-name">ሲዳማ / Sidama</span><div style="display:flex; align-items:center;"><span class="item-price">100 ብር</span><button class="add-btn" onclick="addToCart('ሲዳማ', 100)">＋</button></div></div>
+                <div class="menu-item"><span class="item-name">ይርጋጨፌ / Yirgachefe</span><div style="display:flex; align-items:center;"><span class="item-price">100 ብር</span><button class="add-btn" onclick="addToCart('ይርጋጨፌ', 100)">＋</button></div></div>
+                <div class="menu-item"><span class="item-name">ሊሙ / Limu</span><div style="display:flex; align-items:center;"><span class="item-price">100 ብር</span><button class="add-btn" onclick="addToCart('ሊሙ', 100)">＋</button></div></div>
+                <div class="menu-item"><span class="item-name">ወለጋ / Welega</span><div style="display:flex; align-items:center;"><span class="item-price">100 ብር</span><button class="add-btn" onclick="addToCart('ወለጋ', 100)">＋</button></div></div>
+                <div class="menu-item"><span class="item-name">ሚዛን ተፒ / Mizan Tepi</span><div style="display:flex; align-items:center;"><span class="item-price">100 ብር</span><button class="add-btn" onclick="addToCart('ሚዛን ተፒ', 100)">＋</button></div></div>
+                <div class="menu-item"><span class="item-name">በበካ / Bebeka</span><div style="display:flex; align-items:center;"><span class="item-price">100 ብር</span><button class="add-btn" onclick="addToCart('በበካ', 100)">＋</button></div></div>
+                <div class="menu-item"><span class="item-name">ማንኪራ / Mankira</span><div style="display:flex; align-items:center;"><span class="item-price">100 ብር</span><button class="add-btn" onclick="addToCart('ማንኪራ', 100)">＋</button></div></div>
+                <div class="menu-item"><span class="item-name">ሼካ / Sheka</span><div style="display:flex; align-items:center;"><span class="item-price">100 ብር</span><button class="add-btn" onclick="addToCart('ሼካ', 100)">＋</button></div></div>
+                <div class="menu-item"><span class="item-name">አንኬሻ / Ankesha</span><div style="display:flex; align-items:center;"><span class="item-price">100 ብር</span><button class="add-btn" onclick="addToCart('አንኬሻ', 100)">＋</button></div></div>
+            </div>
+        </div>
 
-    // Initialize App
-    renderCategories();
-    renderMenu();
-    renderExtras();
-    renderCart();
-    renderKds();
-    updateCustomerTracker();
-  </script>
+        <!-- ትኩስ መጠጥ / HOT DRINK -->
+        <div class="category-section">
+            <div class="category-title">🫖 ትኩስ መጠጥ (Hot Drink)</div>
+            <div class="menu-items">
+                <div class="menu-item"><span class="item-name">ወተት / Milk</span><div style="display:flex; align-items:center;"><span class="item-price">180 ብር</span><button class="add-btn" onclick="addToCart('ወተት', 180)">＋</button></div></div>
+                <div class="menu-item"><span class="item-name">ማኪያቶ / Macchiato</span><div style="display:flex; align-items:center;"><span class="item-price">150 ብር</span><button class="add-btn" onclick="addToCart('ማኪያቶ', 150)">＋</button></div></div>
+                <div class="menu-item"><span class="item-name">ጾም ማኪያቶ / Fasting Macchiato</span><div style="display:flex; align-items:center;"><span class="item-price">250 ብር</span><button class="add-btn" onclick="addToCart('ጾም ማኪያቶ', 250)">＋</button></div></div>
+                <div class="menu-item"><span class="item-name">ላቴ / Latte</span><div style="display:flex; align-items:center;"><span class="item-price">200 ብር</span><button class="add-btn" onclick="addToCart('ላቴ', 200)">＋</button></div></div>
+                <div class="menu-item"><span class="item-name">ካፑቺኖ / Cappuccino</span><div style="display:flex; align-items:center;"><span class="item-price">250 ብር</span><button class="add-btn" onclick="addToCart('ካፑቺኖ', 250)">＋</button></div></div>
+                <div class="menu-item"><span class="item-name">ሞት ቸኮሌት / Hot chocolate</span><div style="display:flex; align-items:center;"><span class="item-price">300 ብር</span><button class="add-btn" onclick="addToCart('ሞት ቸኮሌት', 300)">＋</button></div></div>
+                <div class="menu-item"><span class="item-name">ካራሜል ማኪያቶ / Caramel Macchiato</span><div style="display:flex; align-items:center;"><span class="item-price">250 ብር</span><button class="add-btn" onclick="addToCart('ካራሜል ማኪያቶ', 250)">＋</button></div></div>
+                <div class="menu-item"><span class="item-name">ካራሜል ላቴ / Caramel Latte</span><div style="display:flex; align-items:center;"><span class="item-price">280 ብር</span><button class="add-btn" onclick="addToCart('ካራሜል ላቴ', 280)">＋</button></div></div>
+                <div class="menu-item"><span class="item-name">አውሽ ሻይ / Nut tea</span><div style="display:flex; align-items:center;"><span class="item-price">150 ብር</span><button class="add-btn" onclick="addToCart('አውሽ ሻይ', 150)">＋</button></div></div>
+                <div class="menu-item"><span class="item-name">ጅንጀር ሻይ / Ginger tea</span><div style="display:flex; align-items:center;"><span class="item-price">150 ብር</span><button class="add-btn" onclick="addToCart('ጅንጀር ሻይ', 150)">＋</button></div></div>
+                <div class="menu-item"><span class="item-name">ብርቱካን ሻይ / Orange Tea</span><div style="display:flex; align-items:center;"><span class="item-price">150 ብር</span><button class="add-btn" onclick="addToCart('ብርቱካን ሻይ', 150)">＋</button></div></div>
+                <div class="menu-item"><span class="item-name">ፓይናፕል / Pineapple</span><div style="display:flex; align-items:center;"><span class="item-price">150 ብር</span><button class="add-btn" onclick="addToCart('ፓይናፕል', 150)">＋</button></div></div>
+                <div class="menu-item"><span class="item-name">አረንጓዴ ሻይ / Green tea</span><div style="display:flex; align-items:center;"><span class="item-price">150 ብር</span><button class="add-btn" onclick="addToCart('አረንጓዴ ሻይ', 150)">＋</button></div></div>
+                <div class="menu-item"><span class="item-name">ሞሪንጋ ሻይ / Moringa tea</span><div style="display:flex; align-items:center;"><span class="item-price">150 ብር</span><button class="add-btn" onclick="addToCart('ሞሪንጋ ሻይ', 150)">＋</button></div></div>
+                <div class="menu-item"><span class="item-name">ጦስኝ ሻይ / Tosign tea</span><div style="display:flex; align-items:center;"><span class="item-price">150 ብር</span><button class="add-btn" onclick="addToCart('ጦስኝ ሻይ', 150)">＋</button></div></div>
+                <div class="menu-item"><span class="item-name">ሻይ በሎሚ / Tea with lemon</span><div style="display:flex; align-items:center;"><span class="item-price">120 ብር</span><button class="add-btn" onclick="addToCart('ሻይ በሎሚ', 120)">＋</button></div></div>
+                <div class="menu-item"><span class="item-name">አንበሳ / Tea with coffee</span><div style="display:flex; align-items:center;"><span class="item-price">120 ብር</span><button class="add-btn" onclick="addToCart('አንበሳ', 120)">＋</button></div></div>
+                <div class="menu-item"><span class="item-name">ሻይ / Tea</span><div style="display:flex; align-items:center;"><span class="item-price">100 ብር</span><button class="add-btn" onclick="addToCart('ሻይ', 100)">＋</button></div></div>
+                <div class="menu-item"><span class="item-name">ሻይ ኮሬንት / Tea korent</span><div style="display:flex; align-items:center;"><span class="item-price">120 ብር</span><button class="add-btn" onclick="addToCart('ሻይ ኮሬንት', 120)">＋</button></div></div>
+                <div class="menu-item"><span class="item-name">አንበሳሻ ሻይ / Special Tea</span><div style="display:flex; align-items:center;"><span class="item-price">250 ብር</span><button class="add-btn" onclick="addToCart('አንበሳሻ ሻይ', 250)">＋</button></div></div>
+            </div>
+        </div>
+
+        <!-- ጁስ፣ ሼክ እና ቀዝቃዛ መጠጦች / JUICE, SHAKE & COLD DRINKS -->
+        <div class="category-section">
+            <div class="category-title">🧃 ጁስ፣ ሼክ እና ቀዝቃዛ መጠጦች (Juice, Shake & Cold Drinks)</div>
+            <div class="menu-items">
+                <div class="menu-item"><span class="item-name">ፍራፍሬ ጁስ / Seasonal Fruit Juice</span><div style="display:flex; align-items:center;"><span class="item-price">300 ብር</span><button class="add-btn" onclick="addToCart('ፍራፍሬ ጁስ', 300)">＋</button></div></div>
+                <div class="menu-item"><span class="item-name">ሙዝ ሼክ / Banana Shake</span><div style="display:flex; align-items:center;"><span class="item-price">350 ብር</span><button class="add-btn" onclick="addToCart('ሙዝ ሼክ', 350)">＋</button></div></div>
+                <div class="menu-item"><span class="item-name">ፍራፍሬ ጁስ ሼክ / Seasonal Fruit Juice shake</span><div style="display:flex; align-items:center;"><span class="item-price">350 ብር</span><button class="add-btn" onclick="addToCart('ፍራፍሬ ጁስ ሼክ', 350)">＋</button></div></div>
+                <div class="menu-item"><span class="item-name">አይስ ላቴ / Ice Latte</span><div style="display:flex; align-items:center;"><span class="item-price">300 ብር</span><button class="add-btn" onclick="addToCart('አይስ ላቴ', 300)">＋</button></div></div>
+                <div class="menu-item"><span class="item-name">አይስ ኮፊ / Ice Coffee</span><div style="display:flex; align-items:center;"><span class="item-price">250 ብር</span><button class="add-btn" onclick="addToCart('አይስ ኮፊ', 250)">＋</button></div></div>
+                <div class="menu-item"><span class="item-name">አይስ ሻይ / Ice Tea</span><div style="display:flex; align-items:center;"><span class="item-price">200 ብር</span><button class="add-btn" onclick="addToCart('አይስ ሻይ', 200)">＋</button></div></div>
+                <div class="menu-item"><span class="item-name">ሞሂቶ ስትሮበሪ / Mojito Strawberry</span><div style="display:flex; align-items:center;"><span class="item-price">300 ብር</span><button class="add-btn" onclick="addToCart('ሞሂቶ ስትሮበሪ', 300)">＋</button></div></div>
+                <div class="menu-item"><span class="item-name">ሞሂቶ ክላሲክ / Mojito Classic</span><div style="display:flex; align-items:center;"><span class="item-price">280 ብር</span><button class="add-btn" onclick="addToCart('ሞሂቶ ክላሲክ', 280)">＋</button></div></div>
+                <div class="menu-item"><span class="item-name">ሞሂቶ ሲናመን / Mojito cinamen</span><div style="display:flex; align-items:center;"><span class="item-price">280 ብር</span><button class="add-btn" onclick="addToCart('ሞሂቶ ሲናመን', 280)">＋</button></div></div>
+                <div class="menu-item"><span class="item-name">አምቦ ወኃ / Ambo mineral water</span><div style="display:flex; align-items:center;"><span class="item-price">100 ብር</span><button class="add-btn" onclick="addToCart('አምቦ ወኃ', 100)">＋</button></div></div>
+                <div class="menu-item"><span class="item-name">ለስላሳ / Soft Drinks</span><div style="display:flex; align-items:center;"><span class="item-price">100 ብር</span><button class="add-btn" onclick="addToCart('ለስላሳ', 100)">＋</button></div></div>
+                <div class="menu-item"><span class="item-name">ውኃ 1ሊ / 1L Water</span><div style="display:flex; align-items:center;"><span class="item-price">80 ብር</span><button class="add-btn" onclick="addToCart('ውኃ 1ሊ', 80)">＋</button></div></div>
+                <div class="menu-item"><span class="item-name">ውኃ 1/2ሊ / 1/2L Water</span><div style="display:flex; align-items:center;"><span class="item-price">70 ብር</span><button class="add-btn" onclick="addToCart('ውኃ 1/2ሊ', 70)">＋</button></div></div>
+                <div class="menu-item"><span class="item-name">ብስኩት / Biscuits</span><div style="display:flex; align-items:center;"><span class="item-price">60 ብር</span><button class="add-btn" onclick="addToCart('ብስኩት', 60)">＋</button></div></div>
+            </div>
+        </div>
+
+        <!-- ዳሪክ ቁርስ / DARIK BREAKFAST -->
+        <div class="category-section">
+            <div class="category-title">🍳 ዳሪክ ቁርስ (Darik Breakfast)</div>
+            <div class="menu-items">
+                <div class="menu-item"><span class="item-name">ጨጨብሳ / Chechebsa</span><div style="display:flex; align-items:center;"><span class="item-price">350 ብር</span><button class="add-btn" onclick="addToCart('ጨጨብሳ', 350)">＋</button></div></div>
+                <div class="menu-item"><span class="item-name">አንደኛ ጨጨብሳ / Special Chechebsa</span><div style="display:flex; align-items:center;"><span class="item-price">400 ብር</span><button class="add-btn" onclick="addToCart('አንደኛ ጨጨብሳ', 400)">＋</button></div></div>
+                <div class="menu-item"><span class="item-name">የጤፍ ጨጨብሳ / Yetefi Chechebsa</span><div style="display:flex; align-items:center;"><span class="item-price">370 ብር</span><button class="add-btn" onclick="addToCart('የጤፍ ጨጨብሳ', 370)">＋</button></div></div>
+                <div class="menu-item"><span class="item-name">አንደኛ የጤፍ ጨጨብሳ / Special Yetefi Chechebsa</span><div style="display:flex; align-items:center;"><span class="item-price">450 ብር</span><button class="add-btn" onclick="addToCart('አንደኛ የጤፍ ጨጨብሳ', 450)">＋</button></div></div>
+                <div class="menu-item"><span class="item-name">ፉል / Ful</span><div style="display:flex; align-items:center;"><span class="item-price">350 ብር</span><button class="add-btn" onclick="addToCart('ፉል', 350)">＋</button></div></div>
+                <div class="menu-item"><span class="item-name">አንደኛ ፉል / Special Ful</span><div style="display:flex; align-items:center;"><span class="item-price">400 ብር</span><button class="add-btn" onclick="addToCart('አንደኛ ፉል', 400)">＋</button></div></div>
+                <div class="menu-item"><span class="item-name">እንቁላል ፍርፍር / Scrambled Egg</span><div style="display:flex; align-items:center;"><span class="item-price">350 ብር</span><button class="add-btn" onclick="addToCart('እንቁላል ፍርፍር', 350)">＋</button></div></div>
+                <div class="menu-item"><span class="item-name">እንቁላል ሰልቺ / Scrambled Egg with tomato Sauce</span><div style="display:flex; align-items:center;"><span class="item-price">380 ብር</span><button class="add-btn" onclick="addToCart('እንቁላል ሰልቺ', 380)">＋</button></div></div>
+                <div class="menu-item"><span class="item-name">እንቁላል ፍርፍር ከስጋ / Scrambeld Egg with meat</span><div style="display:flex; align-items:center;"><span class="item-price">400 ብር</span><button class="add-btn" onclick="addToCart('እንቁላል ፍርፍር ከስጋ', 400)">＋</button></div></div>
+                <div class="menu-item"><span class="item-name">እንቁላል ሳንድዊች / Egg Sandwich</span><div style="display:flex; align-items:center;"><span class="item-price">300 ብር</span><button class="add-btn" onclick="addToCart('እንቁላል ሳንድዊች', 300)">＋</button></div></div>
+                <div class="menu-item"><span class="item-name">እንቁላል ሳንድዊች ከቺዝ / Egg Sandwich with Cheese</span><div style="display:flex; align-items:center;"><span class="item-price">350 ብር</span><button class="add-btn" onclick="addToCart('እንቁላል ሳንድዊች ከቺዝ', 350)">＋</button></div></div>
+                <div class="menu-item"><span class="item-name">ኦምሌት / Omelette</span><div style="display:flex; align-items:center;"><span class="item-price">370 ብር</span><button class="add-btn" onclick="addToCart('ኦምሌት', 370)">＋</button></div></div>
+                <div class="menu-item"><span class="item-name">ኦምሌት በቺዝ / Omelette with Cheese</span><div style="display:flex; align-items:center;"><span class="item-price">400 ብር</span><button class="add-btn" onclick="addToCart('ኦምሌት በቺዝ', 400)">＋</button></div></div>
+                <div class="menu-item"><span class="item-name">ቱና ሳንድዊች / Tuna Sandwich</span><div style="display:flex; align-items:center;"><span class="item-price">400 ብር</span><button class="add-btn" onclick="addToCart('ቱና ሳንድዊች', 400)">＋</button></div></div>
+                <div class="menu-item"><span class="item-name">ፈረንጅ ድንች / French Fries</span><div style="display:flex; align-items:center;"><span class="item-price">300 ብር</span><button class="add-btn" onclick="addToCart('ፈረንጅ ድንች', 300)">＋</button></div></div>
+                <div class="menu-item"><span class="item-name">ጾም ኦትስ / Fasting Oats</span><div style="display:flex; align-items:center;"><span class="item-price">400 ብር</span><button class="add-btn" onclick="addToCart('ጾም ኦትስ', 400)">＋</button></div></div>
+                <div class="menu-item"><span class="item-name">ልዩ ኦትስ / Special Oats</span><div style="display:flex; align-items:center;"><span class="item-price">500 ብር</span><button class="add-btn" onclick="addToCart('ልዩ ኦትስ', 500)">＋</button></div></div>
+                <div class="menu-item"><span class="item-name">ፓንኬክ / Pancake</span><div style="display:flex; align-items:center;"><span class="item-price">350 ብር</span><button class="add-btn" onclick="addToCart('ፓንኬክ', 350)">＋</button></div></div>
+            </div>
+        </div>
+
+        <!-- ዳሪክ ገበታ / DARIK GEBETA -->
+        <div class="category-section">
+            <div class="category-title">🍽️ ዳሪክ ገበታ (Darik Gebeta)</div>
+            <div class="menu-items">
+                <div class="menu-item"><span class="item-name">ጭከና ጥብስ / Cikena Tibs</span><div style="display:flex; align-items:center;"><span class="item-price">600 ብር</span><button class="add-btn" onclick="addToCart('ጭከና ጥብስ', 600)">＋</button></div></div>
+                <div class="menu-item"><span class="item-name">ጥብስ ፍርፍር / Tibs Firfir</span><div style="display:flex; align-items:center;"><span class="item-price">550 ብር</span><button class="add-btn" onclick="addToCart('ጥብስ ፍርፍር', 550)">＋</button></div></div>
+                <div class="menu-item"><span class="item-name">ዱለት / Dulet</span><div style="display:flex; align-items:center;"><span class="item-price">500 ብር</span><button class="add-btn" onclick="addToCart('ዱለት', 500)">＋</button></div></div>
+                <div class="menu-item"><span class="item-name">ቱና ፍርፍር / Tuna Firfir</span><div style="display:flex; align-items:center;"><span class="item-price">500 ብር</span><button class="add-btn" onclick="addToCart('ቱና ፍርፍር', 500)">＋</button></div></div>
+                <div class="menu-item"><span class="item-name">ጾም ፍርፍር / Fasting Firfir</span><div style="display:flex; align-items:center;"><span class="item-price">350 ብር</span><button class="add-btn" onclick="addToCart('ጾም ፍርፍር', 350)">＋</button></div></div>
+                <div class="menu-item"><span class="item-name">ተጋቢኖ / Tegabino</span><div style="display:flex; align-items:center;"><span class="item-price">450 ብር</span><button class="add-btn" onclick="addToCart('ተጋቢኖ', 450)">＋</button></div></div>
+                <div class="menu-item"><span class="item-name">ሽሮ / Shiro</span><div style="display:flex; align-items:center;"><span class="item-price">400 ብር</span><button class="add-btn" onclick="addToCart('ሽሮ', 400)">＋</button></div></div>
+                <div class="menu-item"><span class="item-name">ሽሮ በቱና / Shiro With Tuna</span><div style="display:flex; align-items:center;"><span class="item-price">500 ብር</span><button class="add-btn" onclick="addToCart('ሽሮ በቱና', 500)">＋</button></div></div>
+                <div class="menu-item"><span class="item-name">ሽሮ በቁስጣ / Shiro With Green</span><div style="display:flex; align-items:center;"><span class="item-price">500 ብር</span><button class="add-btn" onclick="addToCart('ሽሮ በቁስጣ', 500)">＋</button></div></div>
+                <div class="menu-item"><span class="item-name">ሽሮ በሱፍ / Shiro With Suf</span><div style="display:flex; align-items:center;"><span class="item-price">500 ብር</span><button class="add-btn" onclick="addToCart('ሽሮ በሱፍ', 500)">＋</button></div></div>
+                <div class="menu-item"><span class="item-name">ሽሮ በዕንቁላል / Shiro with Egg</span><div style="display:flex; align-items:center;"><span class="item-price">500 ብር</span><button class="add-btn" onclick="addToCart('ሽሮ በዕንቁላል', 500)">＋</button></div></div>
+                <div class="menu-item"><span class="item-name">ቲማቲም ለብለብ / Timatim Lebleb</span><div style="display:flex; align-items:center;"><span class="item-price">380 ብር</span><button class="add-btn" onclick="addToCart('ቲማቲም ለብለብ', 380)">＋</button></div></div>
+                <div class="menu-item"><span class="item-name">ፓስታ በቲማቲም / Pasta with tomato</span><div style="display:flex; align-items:center;"><span class="item-price">390 ብር</span><button class="add-btn" onclick="addToCart('ፓስታ በቲማቲም', 390)">＋</button></div></div>
+                <div class="menu-item"><span class="item-name">ፓስታ በአትክልት / Pasta with Vegetables</span><div style="display:flex; align-items:center;"><span class="item-price">400 ብር</span><button class="add-btn" onclick="addToCart('ፓስታ በአትክልት', 400)">＋</button></div></div>
+                <div class="menu-item"><span class="item-name">ፓስታ በስጋ / Pasta with meat</span><div style="display:flex; align-items:center;"><span class="item-price">450 ብር</span><button class="add-btn" onclick="addToCart('ፓስታ በስጋ', 450)">＋</button></div></div>
+            </div>
+        </div>
+
+        <!-- ሩዝ / RICE -->
+        <div class="category-section">
+            <div class="category-title">🍚 ሩዝ (Rice)</div>
+            <div class="menu-items">
+                <div class="menu-item"><span class="item-name">ሩዝ በቺክን / Rice with chicken</span><div style="display:flex; align-items:center;"><span class="item-price">500 ብር</span><button class="add-btn" onclick="addToCart('ሩዝ በቺክን', 500)">＋</button></div></div>
+                <div class="menu-item"><span class="item-name">ሩዝ በአትክልት / Rice with Vegetables</span><div style="display:flex; align-items:center;"><span class="item-price">400 ብር</span><button class="add-btn" onclick="addToCart('ሩዝ በአትክልት', 400)">＋</button></div></div>
+            </div>
+        </div>
+
+        <!-- ዳሪክ ሻርማ እና በርገር / DARIK SHAWARMA & BURGER -->
+        <div class="category-section">
+            <div class="category-title">🍔 ዳሪክ ሻርማ እና በርገር (Darik Shawarma & Burger)</div>
+            <div class="menu-items">
+                <div class="menu-item"><span class="item-name">ዳሪክ ልዩ በርገር / Darik Special Burger</span><div style="display:flex; align-items:center;"><span class="item-price">600 ብር</span><button class="add-btn" onclick="addToCart('ዳሪክ ልዩ በርገር', 600)">＋</button></div></div>
+                <div class="menu-item"><span class="item-name">ደብል ልዩ በርገር / Double Special Burger</span><div style="display:flex; align-items:center;"><span class="item-price">750 ብር</span><button class="add-btn" onclick="addToCart('ደብል ልዩ በርገር', 750)">＋</button></div></div>
+                <div class="menu-item"><span class="item-name">ቺዝ በርገር / Cheese Burger</span><div style="display:flex; align-items:center;"><span class="item-price">550 ብር</span><button class="add-btn" onclick="addToCart('ቺዝ በርገር', 550)">＋</button></div></div>
+                <div class="menu-item"><span class="item-name">ኖርማል በርገር / Normal Burger</span><div style="display:flex; align-items:center;"><span class="item-price">500 ብር</span><button class="add-btn" onclick="addToCart('ኖርማል በርገር', 500)">＋</button></div></div>
+                <div class="menu-item"><span class="item-name">አንደኛ ሻርማ / Special Shawarma</span><div style="display:flex; align-items:center;"><span class="item-price">650 ብር</span><button class="add-btn" onclick="addToCart('አንደኛ ሻርማ', 650)">＋</button></div></div>
+                <div class="menu-item"><span class="item-name">ቺክን ሻርማ / Chicken Shawarma</span><div style="display:flex; align-items:center;"><span class="item-price">600 ብር</span><button class="add-btn" onclick="addToCart('ቺክን ሻርማ', 600)">＋</button></div></div>
+                <div class="menu-item"><span class="item-name">ቢፍ ሻርማ / Beef Shawarma</span><div style="display:flex; align-items:center;"><span class="item-price">500 ብር</span><button class="add-btn" onclick="addToCart('ቢፍ ሻርማ', 500)">＋</button></div></div>
+                <div class="menu-item"><span class="item-name">ቱና ሻርማ / Tuna Shawarma</span><div style="display:flex; align-items:center;"><span class="item-price">500 ብር</span><button class="add-btn" onclick="addToCart('ቱና ሻርማ', 500)">＋</button></div></div>
+            </div>
+        </div>
+
+        <!-- ተጨማሪ / EXTRA -->
+        <div class="category-section">
+            <div class="category-title">➕ ተጨማሪ (Extra)</div>
+            <div class="menu-items">
+                <div class="menu-item"><span class="item-name">ተጨማሪ እንጀራ / Extra Enjera</span><div style="display:flex; align-items:center;"><span class="item-price">60 ብር</span><button class="add-btn" onclick="addToCart('ተጨማሪ እንጀራ', 60)">＋</button></div></div>
+                <div class="menu-item"><span class="item-name">ተጨማሪ ዳቦ / Extra Bread</span><div style="display:flex; align-items:center;"><span class="item-price">60 ብር</span><button class="add-btn" onclick="addToCart('ተጨማሪ ዳቦ', 60)">＋</button></div></div>
+                <div class="menu-item"><span class="item-name">ማዮኒዝ / Mayonnaise</span><div style="display:flex; align-items:center;"><span class="item-price">70 ብር</span><button class="add-btn" onclick="addToCart('ማዮኒዝ', 70)">＋</button></div></div>
+                <div class="menu-item"><span class="item-name">ቺሊ ማዮኒዝ / Chili mayonnaise</span><div style="display:flex; align-items:center;"><span class="item-price">80 ብር</span><button class="add-btn" onclick="addToCart('ቺሊ ማዮኒዝ', 80)">＋</button></div></div>
+                <div class="menu-item"><span class="item-name">ቺዝ / Cheese</span><div style="display:flex; align-items:center;"><span class="item-price">60 ብር</span><button class="add-btn" onclick="addToCart('ቺዝ', 60)">＋</button></div></div>
+                <div class="menu-item"><span class="item-name">ስጋ / Beef</span><div style="display:flex; align-items:center;"><span class="item-price">80 ብር</span><button class="add-btn" onclick="addToCart('ስጋ', 80)">＋</button></div></div>
+                <div class="menu-item"><span class="item-name">እንቁላል / Egg</span><div style="display:flex; align-items:center;"><span class="item-price">60 ብር</span><button class="add-btn" onclick="addToCart('እንቁላል', 60)">＋</button></div></div>
+                <div class="menu-item"><span class="item-name">ድንች Ֆ라이 / Fries</span><div style="display:flex; align-items:center;"><span class="item-price">100 ብር</span><button class="add-btn" onclick="addToCart('ድንች Ֆ라이', 100)">＋</button></div></div>
+            </div>
+        </div>
+
+        <div class="vat-notice">
+            All prices are VAT inclusive!
+        </div>
+
+    </div>
+
+    <!-- የታችኛው የትዕዛዝ ማጠቃለያ ባር (Cart Footer) -->
+    <div class="cart-bar">
+        <div class="cart-info" id="cartInfo">ምንም እቃ አልተመረጠም (0 እቃዎች)</div>
+        <button class="order-btn" onclick="sendOrder()">ትዕዛዝ ላክ (Order)</button>
+    </div>
+
+    <footer>
+        <p>&copy; 2026 Darik Coffee. All rights reserved.</p>
+    </footer>
+
+    <script>
+        let cartCount = 0;
+        let totalPrice = 0;
+        let cartItems = [];
+
+        function addToCart(name, price) {
+            cartCount++;
+            totalPrice += price;
+            cartItems.push(name);
+            updateCartDisplay();
+        }
+
+        function updateCartDisplay() {
+            const cartInfo = document.getElementById('cartInfo');
+            if (cartCount > 0) {
+                cartInfo.innerText = `የተመረጠ: ${cartCount} እቃዎች | ድምር: ${totalPrice} ብር`;
+            } else {
+                cartInfo.innerText = "ምንም እቃ አልተመረጠም (0 እቃዎች)";
+            }
+        }
+
+        function sendOrder() {
+            if (cartCount === 0) {
+                alert("እባክዎ ከመምረጥዎ በፊት የሚፈልጉትን ምግብ ወይም መጠጥ ይምረጡ!");
+                return;
+            }
+            const tableNum = document.getElementById('tableNumber').value;
+            alert(`ትዕዛዝዎ በተሳካ ሁኔታ ለጠረጴዛ ${tableNum} ተልኳል!\nጠቅላላ ዋጋ: ${totalPrice} ብር`);
+            // ዳግም ማስጀመር
+            cartCount = 0;
+            totalPrice = 0;
+            cartItems = [];
+            updateCartDisplay();
+        }
+
+        function filterMenu() {
+            let input = document.getElementById('searchMenu').value.toLowerCase();
+            let items = document.querySelectorAll('.menu-item');
+            
+            items.forEach(item => {
+                let text = item.innerText.toLowerCase();
+                if (text.includes(input)) {
+                    item.style.display = "flex";
+                } else {
+                    item.style.display = "none";
+                }
+            });
+        }
+    </script>
 </body>
 </html>
